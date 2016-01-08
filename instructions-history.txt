@@ -1,0 +1,631 @@
+Dark Engine Motion Editor Version 2.0.2
+Sunday, June 13, 2004.
+by Philip M. Anderson (Weyoun)
+
+----------------------------------------------
+Introduction:
+----------------------------------------------
+
+The Dark Engine was designed by Looking Glass Studios to run in a modular fashion - many of the
+major components of any Dark Engine game (such as sounds, texture bitmaps, AI meshes, etc) were
+set up in such a fashion that the user could easily replace them, and produce entirely new
+'virtual environments'.  To date, these so-called 'resources' have all been customisable, with
+one notable exception - motions.  The only thing standing in the way of custom motions was a lack
+of understanding of the file-format used for storing motion data.  This is no longer the case,
+and now custom motions can be created - enter the Dark Engine Motion Editor!
+
+----------------------------------------------
+Motions, and the Dark Engine:
+----------------------------------------------
+
+All 'living creatures' (and that includes the undead) in the Dark Engine games are represented by
+a 3D virtual physical structure, known as a mesh.  This mesh is jointed in various locations,
+such as the shoulders, elbows and neck.  These joints act in much the same way as a human's, with
+the exception that there are no significant limits on the motions performed.  These guys really
+can turn their heads through 360 degrees - several times!
+
+These joints are set up so that initially, the AI takes on the 'neutral pose', which many
+DromEd-ers will be familiar with as the 'crucified' position (for humanoids).  Movements
+(rotations) of these joints are contolled by data contained within .mc files (found in the file
+'motions.crf').  The rotational data itself is stored as 'quaternions', which are currently the
+most effective way to deal with orientations in 3-dimensional space.  The motion editor
+integrated into DromEd does not modify .mc files - it only plays them back.  DromEd's motion
+editor is solely used for the modification of .mi files.  These .mi files are far more mundane -
+they detail things such as capture frequency (playback rate), the number of frames present in the
+motion, and a few more advanced things, such as exactly when during the motion playback to play
+footfall sounds, emit projectiles etc.  Although the .mi files are present in 'motions.crf', I do
+not believe they are necessary for motion playback.  All of the data contained in the .mi files
+corresponding to the motions used in a Dark Engine game is repeated in the file 'motiondb.bin',
+and it is from this motion database file that the previously mentioned capture frequency, frame
+count and sound/projectile flags are read.  As far as I can tell, the .mi files are only used in
+compiling the 'motiondb.bin' file and in this motion editor program.
+
+----------------------------------------------
+How the Dark Engine Motion Editor Works:
+----------------------------------------------
+
+As previously mentioned, the motions for Dark Engine games are stored as quaternions.
+Quaternions are made up of four floating-point numbers, between 0 and 1, and the sum of the
+squares of these quaternions is unity:
+
+   (q1 x q1) + (q2 x q2) + (q3 x q3) + (q4 x q4) = 1
+
+It is a simple (!) matter to convert quaternions to a more conceptually simple representation -
+Euler angles.
+
+Consider an aeroplane, flying level, and heading north.  There are three orthogonal (mutually
+perpendicular) axes of rotation.  The x-axis (running parallel to the ground - assuming a flat
+earth - and from the tail to the nose), the y-axis (again parallel to the ground, and running
+from wing-tip to wing-tip), and the z-axis (perpendicular to the ground and passing through the
+aircraft from floor to ceiling).  Rotation about the x-axis is known as 'roll', and will roll the
+aircraft.  Rotation about the y-axis will cause the aircraft to climb of fall.  Rotation about
+the z-axis will change the heading of the aeroplane.  At any given moment, the orientation of the
+aircraft (how far it has rolled, how much it is climbing/falling, and which direction it is
+heading) can be described by three angles - the Euler angles.
+
+In conversion of quaternions -> Euler angles (and Euler angles -> quaternions), an intermediate
+representation of the rotation is used - a 'rotation matrix':
+
+                        | m1 m2 m3 |
+   |q1, q2, q3, q4| <-> | m4 m5 m6 | <-> |x, y, z|
+                        | m7 m8 m9 |
+
+It should be noted that there may be more than one set of Euler angles that can describe a
+particular orientation, particularly when all three angles are allowed any value in the range
+0-359 degrees (as is the case in this program).  It is actually only necessary to allow two of
+the Euler angles any value between 0-359 degrees, with the third being restricted to 0-179
+degrees, so there is a certain amount of redundancy in the Euler angle specifications given in
+this program, and an increased number of Euler angle sets that can describe a particular
+orientation.
+
+This program first reads the contents of the .mi file, to determine the number of frames in the
+motion, as well as other useful statistics.  Then the program moves on to the .mc file.  Each
+quaternion is read in and then converted to Euler angles to make use of the program as
+conceptually simple (not to mention easy to write!) as possible.  After the user has modified the
+motion data by manipulating the Euler angles, the program converts these back to quaternions and
+writes out the data back to a .mc file ready for use in Thief/System Shock 2.
+
+In humanoid meshes, there are 16 'joints'.  Joints 2-16 are normal rotations (e.g. 2 is Left
+Ankle, 5 is Right Knee).  Joint 8 represents the rotation of the model as a whole.  Joint 1 is
+special in that it is not really a joint - it is a displacement.  Usually, joint 1 will not
+significantly deviate from 0, 0, 0 (x, y, z) during a motion.  The main exceptions to this are
+the locomotion motions - when an AI walks, the mesh is obviously going to undergo displacement.
+
+----------------------------------------------
+Using this Motion Editor:
+----------------------------------------------
+
+In order to use the motion editor, the user must have the .mi and .mc files for any motion he/she
+wishes to edit.  The motions for Dark Engine games are stored in a file called 'motions.crf'.
+.crf files are merely .zip files with the extension changed from 'zip' to 'crf', so all good
+compression/archiver programs (WinZip, PowerArchiver, etc) should be able to read them.
+
+Once you've loaded a motion, you will be able to modify the individual rotations of each of the
+joints involved in the motion.  Your modifications (made by moving sliders to change angles) will
+be reflected in three preview windows, so you can see what changes you are making to the motion.
+
+Speaking of the preview windows, do you recognise the stick man depicted therein?  You should -
+it's Karras!  That's right - I extracted the joint coordinates from the file Karras.e.  So now
+you can be as mean as you like to the nasty mechanist man, and make him perform whatever
+punishment you can think of...
+
+After you've modified the motions to your satisfaction, and saved them, they need to be moved
+into 'xxxxx/motions/' (where xxxxx=your Thief / System Shock II directory).  Then you can access
+them the way you'd access any other motion (e.g. conversations, current pose settings etc.)
+
+----------------------------------------------
+Program Features:
+----------------------------------------------
+
+After double-clicking the program's icon, a colourful window should appear.  From top to bottom,
+and left to right, here are the program's main features:
+
+File menu:
+   New                   - Creates a new motion file.
+   Open...               - Opens a motion.  First you must select the .mi file, and then the
+                           corresponding .mc file.
+   Save                  - Converts currently loaded (modified) motion data back to quaternion
+                           format, and writes back to the original .mc file.  The .mi file is
+                           unaffected.
+   Save As               - Saves the current motion (.mi and .mc) under new filenames.
+   Close                 - Closes a motion file, and discards all data contained in memory,
+                           allowing the user to begin afresh.
+   Exit                  - Guess!
+
+Edit menu:
+   Blank Current Joint   - Resets all motion data in memory back to the neutral pose for this
+                           joint.  This is useful if the user wished to discard the motion data for
+                           a particular joint, to begin anew.
+
+   Set Marker at Current - Tags the current frame for copying and interpolation.
+   Frame 
+
+   Copy From Marked      - Copies all joint data (rotations, not translations) from the marked
+   Frame                   frame into the currently selected frame.
+
+   Current Creature Type - Allows the user to change the creature that plays back this motion in
+                           the preview windows.  Currently, this is limited to humanoids and
+                           burricks.
+
+   Options               -
+      Interactive Graphs in Preview Playback Mode - The user can use this to turn on or off the
+                                                    animation of the graphs and sliders during
+                                                    preview playback mode.
+
+   Linear Interpolation  -
+      Interpolate X (Curr Joint) - Performs linear interpolation between the marked frame and
+      Interpolate Y (Curr Joint) - the current frame for the X, Y and Z axes individually, and
+      Interpolate Z (Curr Joint) - only for the currently selected joint.
+
+      Interpolate X, Y and Z     - Performs linear interpolation on all three axes simultaneously
+      Axes (Curr Joint)            for the currently selected joint.
+
+      Interpolate X (All Joints) - Performs linear interpolation between the marked frame and
+      Interpolate Y (All Joints) - the current frame for the X, Y and Z axes individually, for
+      Interpolate Z (All Joints) - all (rotation) joints.
+
+      Interpolate X, Y and Z     - Performs linear interpolation on all three axes simultaneously
+      Axes (All Joints)            for all (rotation) joints.
+
+Tags menu:
+      This menu is used for setting .mi motion tags (not to be confused with DromEd's motion
+      tags).  This menu mirrors the functions of the checkboxes in the main window.
+
+About menu:
+   About 'Motion Editor' - Version and author information.
+
+Drop-down menu bar:
+   This is where the editor is switched between the various joints in the mesh.  The joint number
+   and name is given here, and the number is echoed in the neighbouring 'Current Joint' label.
+
+Creature Type Label:
+   Displays the currently selected creature type.
+
+Frame Count Label:
+   Displays the number of frames in the currently loaded motion.
+
+Frame Rate Label:
+   Displays the capture frequency / playback rate of the currently loaded motion.
+
+X Rotation/Translation Graph (Red/Cyan Box):
+   A graph of x-axis rotation/translation vs frame number for the current joint is plotted here
+   when a rotatable joint (2 - 16) is selected.  If joint 1 is selected, the box will turn cyan,
+   to indicate switching from rotation editing to translation editing.
+X Rotation/Translation Slider:
+   This slider is used to modify the value of the x-axis rotation/translation for the currently
+   selected joint at the current frame.
+X Rotation/Translation Label:
+   Displays the value (in degrees) of the current x-axis rotation in degrees.
+X Axis Preview Window (Black Box):
+   The current pose (for the current frame), viewed along the x-axis will be drawn using a
+   stick-figure representation.
+
+
+Y Rotation/Translation Graph (Green/Magenta Box):
+   A graph of y-axis rotation/translation vs frame number for the current joint is plotted here
+   when a rotatable joint (2 - 16) is selected.  If joint 1 is selected, the box will turn
+   magenta, to indicate switching from rotation editing to translation editing.
+Y Rotation/Translation Slider:
+   This slider is used to modify the value of the y-axis rotation/translation for the currently
+   selected joint at the current frame.
+Y Rotation/Translation Label:
+   Displays the value (in degrees) of the current y-axis rotation in degrees.
+Y Axis Preview Window (Black Box):
+   The current pose (for the current frame), viewed along the y-axis will be drawn using a
+   stick-figure representation.
+
+Z Rotation/Translation Graph (Blue/Yellow Box):
+   A graph of z-axis rotation/translation vs frame number for the current joint is plotted here
+   when a rotatable joint (2 - 16) is selected.  If joint 1 is selected, the box will turn
+   yellow, to indicate switching from rotation editing to translation editing.
+Z Rotation/Translation Slider:
+   This slider is used to modify the value of the z-axis rotation/translation for the currently
+   selected joint at the current frame.
+Z Rotation/Translation Label:
+   Displays the value (in degrees) of the current z-axis rotation in degrees.
+Z Axis Preview Window (Black Box):
+   The current pose (for the current frame), viewed along the z-axis will be drawn using a
+   stick-figure representation.
+
+Motion Tag checkboxes:
+   Used for setting .mi motion tags.  These are mirrored in the Tags menu.
+
+Frame Slider:
+   Used to select the frame to be edited.
+
+'Preview Play' Button:
+   Used to preview the motion by animating the stick figure representation in the three black
+   windows.
+
+'Stop Preview' Button:
+   Used to stop a preview play that is in progress.
+
+'<' and '>' Buttons:
+   Used to move to the previous or next frame respectively.
+
+Frame Label:
+   Displays the current frame number.
+
+----------------------------------------------
+Hints & Tips:
+----------------------------------------------
+
+- Sometimes when you load a motion file, a message may appear, saying "Warning - this motion does
+  not correspond to any currently supported creature type."  This is the result of a fairly basic
+  check on the input file to determine creature type.  Usually, this can be ignored - initially,
+  the creature type will be set to 'Unknown' - just use the Edit menu to change to humanoid or
+  burrick, and you should be OK.  Among others, this occurs with the 'twirl2' motion.
+
+----------------------------------------------
+Future Improvements:
+----------------------------------------------
+
+Version 2.0.1 of the motion editor features a couple of major improvements to version 2.0.0 - 
+namely the ability to modify translation data.  There are still, however, a great many ideas that
+can be implemented as further improvements to this program.
+
+I hope that some day I'll be able to implement these ideas in various updated versions of this
+motion editor, time, commitments and demand permitting.
+
+1 - Editing other creature types.
+    Currently, this program only works for human(oid) AI units, and burricks.  In particular, it
+    has only been tested on motions meant for the following units (all from Thief): Burrick,
+    Hammerite guard, Swordsman, Bowman, Servant (as in Bafford's cook, not as in Karras'
+    creations).  Although present in a drop-down menu, other creature types cannot yet be used.
+    Some day I'll get around to allowing spiders, but at the minute I'm rather daunted by the
+    large number of joints they have!
+
+    I expect that other, similar in appearance units will be fully compatible with this software,
+    e.g. 
+     Thief: Haunts, Apparitions, Zombies (?), Karras' servants, Mechanists, any other human AI
+            unit.
+     SS2:   Humans, hybrids and ghosts.
+
+2 - Preview window.
+    Due to the relative graphical complexity of the AI meshes in Dark Engine games, using basic
+    Delphi/Windows graphics techniques to draw the current model's pose using 3D mesh files would
+    take forever.  A fast graphical method such as DirectX would be required to do this fast
+    enough to be useful, and currently I'm rather intimidated by the scary-looking tutorials I
+    have on DirectX, so for now, you'll have to make do with stick-man (tm), and his pet
+    stick-burrick (tm).
+
+3 - Import motion capture data.
+    On the internet, there is quite a good deal of freely downloadable motion capture data.  This
+    data is quite simple to read (and the .bvh format even stores the motion data as Euler
+    angles).  Unfortunately, it would be quite awkward currently to set up an interface to allow
+    the user to arrange correlations between the joints used in Thief/System Shock 2 and the
+    joints defined in the motion capture data.
+
+    In addition, if the capture source and Dark Engine AI mesh are not identical in
+    sizes/positions of bones/joints, then the resulting conversion to .mc format will look
+    unrealistic - I've tried, and I got a man sitting on his behind, waving his legs in the air
+    on what was supposed to be a walking motion.  Even so, I think this would be a worthwhile
+    modification to make, and some day I'll probably get round to investigating this more
+    thoroughly.
+
+4 - Interpolation / Keyframing.
+    The current interpolation routine is only the most basic imaginable, based upon the Euler
+    angles in the rotation, and will give very poor results.  Quaternion based interpolation is
+    supposed to be much better, but I currently have no information on how to do this.  I've read
+    about a technique called "SLERP", or spherical linear interpolation, but I can't find any
+    explanations that I could use to implement this.  I need to do more research on this before I
+    can improve the interpolation scheme used.
+
+----------------------------------------------
+Acknowledgements:
+----------------------------------------------
+
+Thanks to the following people who have contributed to this project:
+
+Shadowspawn:
+   Master (1) of the motion database, Shadowspawn figured out how to read the data contained in
+   .mi files (which are identical in format to the fourth data block stored in motiondb.bin), as
+   well as relentlessly (and successfully) working towards a complete file-format specification
+   for the motion database.  In addition, Shadowspawn's BINTOE program was most useful in
+   extracting the joint positions from the burrick mesh files.  Now with his Motion Database
+   Editor, there are less excuses than ever for us not seeing more custom motions!
+
+Zygoptera:
+   Master (2) of the motion database, Zygoptera discovered which section of the .mi file relates
+   to the number of frames in a motion, as well as making some important breakthroughs on the
+   motion database.
+
+Everyone at www.ttlg.com/forums:
+   Thanks for being such an enthusiastic fan-community for Thief/System Shock.  I would never
+   have gotten this far without you!
+
+Everyone who contributed to the 'Matrix and Quaternion FAQ':
+   This immensely useful and comprehensive FAQ has been invaluable to me in producing this
+   program.  The explanations and algorithms contained within form the very basis of this
+   program's inner-workings.
+
+Denthor:
+   Denthor wrote a number of interesting and useful tutorials as part of the "PC Games
+   Programmers' Encyclopedia".  In particular, tutorial number 8 (3D graphics) was most useful
+   in drawing the stick man preview windows.  Thanks, Denthor!
+
+Colourless:
+   Colourless' tutorial, "How to make new BIPED Meshes for Dark Engine Games" has been invaluable
+   during this project.  Thanks to this tutorial, I was able to figure out the naming and
+   connectivity of the humanoid joint system in order to implement the preview windows.
+
+----------------------------------------------
+Version History:
+----------------------------------------------
+
+Version 2.0.2 - Completed 14/6/2004.
+   Seventh major update.  The following has changed from version 2.0.1:
+
+    1. Modification:
+       Some rearrangement of joint numbering system to match .map and .mjo files more closely.
+
+    2. Bug fix:
+       Writing of flags (in .mi file) was incorrect, as the value '2048' was assigned to both
+       'Blank 3' AND 'Trigger 1'.  This has now been fixed.
+
+    3. Addition:
+       Added functionality to edit player arm.
+       ** THIS FEATURE HAS NOT BEEN FULLY TESTED **
+
+    4. Modification:
+       The joint selector drop-down menu is now generated at run-time rather than compile-time,
+       and its contents are now changed depending on edit mode (humanoid/arm).
+
+-------------------------------------------------------------------------------------------------
+
+Version 2.0.1 - Completed 7/12/2003.
+   Sixth major update.  The following has changed from version 2.0.0:
+
+    1. Modification:
+       Changes to values in edit boxes now only take effect when enter is pressed
+
+    2. Modification:
+       Now rotations (and translations) are no longer restricted to integer vales.  Reals to
+       three decimal places can be used.
+
+    3. Addition:
+       Joint 1 (translation) can now be edited at last.
+
+    4. Modification:
+       Modified interpolation routines to include joint 1.
+
+    5. Modification:
+       Changed colours of grids in preview windows to reflect the graphs' colours.
+
+    6. Modification:
+       Sliders disappear when joint 1 is selected, as slider editing isn't really
+       appropriate.
+
+    7. Modification:
+       Unlike rotations, there is no real limit (except that imposed by the 'XXX.XXX'
+       representation) to the values allowed in translation (joint 1).  Therefore graphs in
+       joint 1 mode will scale to span only the full range of values currently set.  Labels
+       show maximum and minimum values.
+
+    8. Bug fix:
+       Fixed File/Save so that it is only enabled when a filename has already been allocated.
+
+    9. Bug fix:
+       Fixed some issues with File/Close.
+
+   10. Addition:
+       Added 'built with Delphi' image to About form.
+
+-------------------------------------------------------------------------------------------------
+
+Version 2.0.0 - Completed 27/11/2003.
+   Fifth major update.  The following has changed from version 1.4:
+
+    1. Bug fix:
+       Fixed DrawGrids routine so that each window's redraw event only references its own
+       width and height.
+
+    2. Modification:
+       Replaced the majority of the labels on the main form with data in two new status bars.
+
+    3. Modification:
+       More source tidying.
+
+    4. Modification:
+       Changed default behaviour to "Don't update graphs & sliders" on playback as it slows the
+       preview process significantly (at least on my machine!)
+
+    5. Addition:
+       Added facility to modify motion parameters (frame count, frame rate, creature class
+       etc).
+
+    6. Addition:
+       Added File/New function to create new motions.
+
+    7. Addition:
+       Now allows the editing of frame-based flags (like Left Footfall, or CanInterrupt)
+       from .mi file, using new Tags menu, or column of checkboxes.
+
+    8. Addition:
+       Now saves modified .mi file (including any flags set) as well as modified .mc file.
+
+    9. Modification:
+       Graph and preview windows now blank out when File/Close is selected.
+
+   10. Addition:
+       Implemented File/Save As...
+
+   11. Modification:
+       Replaced preview play & stop buttons (BUTTON) with BitBtn, and introduced glyphs.
+
+   12. Bug fix:
+       Finally fixed the gadget redraw problem that afflicted Windows XP users.  Apparently XP's
+       OnPaint event conflicts somehow with TImage bitmaps.  Fortunately the bitmaps still seem
+       to redraw correctly after the offending command was removed.
+
+   13. Bug fix:
+       Another XP problem, the preview play function failing to work, has now been solved.  The
+       function failed because the timer component (which was set to ENABLED at compile-time) is
+       mysteriously turned off by XP at run-time.  The command to enable the timer has now been
+       associated with the preview play button, so nbow things should work properly.
+
+-------------------------------------------------------------------------------------------------
+
+Version 1.4 - Completed 27/9/2003.
+   Fourth major update.  The following has changed from version 1.3:
+
+    1. Modification:
+       Disabled 'maximise' button to prevent window resizing.
+
+    2. Modification:
+       Forced a form redraw event on program startup, to try to remove XP/2000 bug where form is
+       not drawn properly when program is started.
+
+    3. Modification:
+       Moved "Current Joint" label to a more appropriate location, and also added colon.
+
+    4. Modification:
+       Further tidying of source.
+
+    5. Addition:
+       Added code to draw 'stationary' lines in preview windows, so that motions involving
+       translation (walking motions) can be appreciated fully.  'Stationary' lines actually move
+       as 'camera' pans past them, tracking stick-character.
+
+    6. Modification:
+       Replaced PreviewPlayTimer (Timer) with DXPreviewPlayTimer (DXTimer) from DelphiX
+       component, to try to solve timer problems on XP/2000.  Preview play function is now
+       significantly faster as a result - motions are now played at a speed much closer to the
+       capture frequency.
+
+    7. Modification:
+       Replaced CurrFrameLabel with FrameNoEdit, so that desired frame number can be entered
+       directly just as in rotations.
+
+-------------------------------------------------------------------------------------------------
+
+Version 1.3 - Completed 7/9/2003.
+   Third major update.  The following has changed from version 1.2:
+
+    1. Modification:
+       Changed options in Edit/Creature Type and Edit/Options submenus to more
+       appropriate RADIO-BUTTON type, rather than CHECKED type as it was before.
+
+    2. Modification:
+       Added command to redraw graphs in when Edit/Blank Current Joint is selected -
+       graphs didn't redraw automatically in old versions.
+
+    3. Addition:
+       Added crude linear interpolation.  Can interpolate X, Y and Z axes
+       independently, and also simultaneously.
+
+    4. Modification:
+       Changed captions on Edit/Creature Type menu items to reflect which Dark
+       game (Thief or SS2) the creature type in question is relevant to.
+
+    5. Addition:
+       Improved interpolation so that all joints can be interpolated together,
+       as well as just one.
+
+    6. Addition:
+       Added copy feature, where the contents of one frame can be copied into
+       another.
+
+-------------------------------------------------------------------------------------------------
+
+Version 1.2 - Completed 9/2/2003.
+   Second major update.  The following has changed from version 1.1:
+
+    1. Modification:
+       Tidied source a little, by splitting huge, repetitive routines into smaller subroutines.
+       Considering generalising some of these routines (if possible) to reduce source length.
+
+    2. Addition:
+       Also added feature for burrick motion editing, and because Burricks and Humanoids share a
+       common joint skeleton, the same redraw preview routines are used for both.  New item added
+       to Edit menu to allow the user to switch between Burrick and Humanoid preview drawings.
+
+    3. Bug Fix:
+       Modified 'Blank Current Joint' routine, so that now all rotations are blanked to 180, 0, 0
+       (as before) but joint 1 (position) is blanked to 0, 0, 0 (no displacement).
+
+    4. Bug Fix:
+       The current frame was reset to frame 1 every time the last frame was selected on the frame
+       selector slider.  This was only supposed to happen during 'preview play' mode, so that at
+       the end of the preview, the animation would reset to the beginning.  A check was added to
+       ensure that preview play mode was active before resetting the frame number, fixing the
+       bug.
+
+    5. Modification:
+       Disabled 'New' menu item, so that the user cannot select File/New.  Now this menu item no
+       longer looks as if it should do something, when it doesn't.
+
+    6. Bug Fix:
+       Ensured that 'Blank Current Joint' menu item is inaccessible when no joint is selected.
+       This item was not disabled previously, and caused crashes on selection.
+
+    7. Addition:
+       Added option to Edit menu, to allow user to turn on/off the animated graphs and sliders in
+       preview playback mode.  May be useful for slower computers.
+
+    8. Addition:
+       Added text entry boxes for joint rotations, so the user has the choice of using the
+       sliders, or manual entry.  The old labels (now redundant) have not been removed, to allow
+       easy removal of this new feature if users do not like it.  Without delving into
+       complicated exception handling routines, it will probably not be possible to remove the (I
+       think) annoying 'Not an integer value' error pop-up when the contents of the text box are
+       deleted or modified to contain a non-numeric character.
+
+    9. Bug Fix:
+       In earlier versions, the positions of the arms in this program's preview window sometimes
+       differed from the positions of the arms in DromEd and Thief.  This was discovered to be
+       caused by a sensitivity to the order in which the seperate rotations are executed.  The
+       order has been changed in this version to match the order of definition (i.e. joint 1 is
+       rotated first, then 2 etc), so now things should work properly.
+
+-------------------------------------------------------------------------------------------------
+
+Version 1.1 - Completed 9/2/2003.
+   First major update.  The following has changed from version 1.0:
+
+    1. Addition:
+       After much work, added three preview windows, so that the current pose can be viewed along
+       the X, Y and Z axes simultaneously (in three different 'winows'.  Also added a preview
+       play function, requiring the use of a 'timer' component.
+
+    2. Addition:
+       Added two buttons, used to increase/decrease the current frame position by one, requested
+       by TTLG's jericho, because of difficulties in selecting specific frames in motions with
+       large number of frames - slider becomes too sensitive and often skips frames.
+
+    3. Bug Fix:
+       Changed the graph redraw (and preview redraw) method from
+       'Form1.Canvas.Rectangle(X1, Y1, X2, Y2)' to
+       'Form1.Canvas.FillRect(Rect(X1, Y1, X2, Y2))'.  For some reason, with the former method,
+       the filled rectangles would become 'faded' if the form was moved or redraws (e.g.
+       minimised then restored).  I don't know why the old method failed, but the new method
+       seems to work OK.
+
+    4. Bug Fix:
+       Added code to redraw graphs into FrameSelectorChange.  Previously, the graphs would not be
+       redrawn occasionally when the frame was changed.  New code ensures that graphs will always
+       be up to date when frame number is changed.
+
+    5. Bug Fix:
+       Added code to ensure that Edit/Blank Current Joint becomes disabled when no data is
+       loaded, and enabled when data is loaded.
+
+    6. Bug Fix:
+       For some reason, my X, Y and Z axes corresponded to DromEd's -Z, -Y and -X axes
+       respectively.  I have changed the graph and preview windows so that although they are
+       still labelled X, Y and Z, they are now actually -Z, -Y and -X respectively.  I also
+       swapped the positions of the X and Z rotation slider bars, for the same reason.
+
+----------------------------------------------
+
+Version 1.0 - Completed 1/2/2003.
+   First functional version.  Initial release.
+
+----------------------------------------------
+Contacting the Author:
+----------------------------------------------
+
+You can contact me to report bugs / make enquiries / tell jokes / whatever in the following ways:
+
+email               - weyoun47'at'gmail.com
+www.ttlg.com/forums - I am a member of TTLG's Editors' Guild, and I post under the name 'Weyoun'.
